@@ -1,16 +1,28 @@
 package com.andrewblake.minesweeper
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.andrewblake.minesweeper.ui.theme.MinesweeperTheme
+
+val gameController = GameController(10, 20, 20)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,7 +34,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Greeting("Android")
+                    PlayGrid(10, 20)
+
                 }
             }
         }
@@ -30,17 +43,40 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
+        /**
+         * The main play area where the grid of tiles is displayed
+         */
+fun PlayGrid(width: Int, height: Int) {
+    Column {
+        for (i in 0 until height) {
+            Row {
+                for (j in 0 until width) {
+                    Tile(j, i)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun Tile(x:Int, y:Int) {
+    Button(
+        onClick = { /*TODO*/ },
+        shape = RectangleShape,
+        contentPadding = PaddingValues(0.dp),
+        modifier = Modifier
+            .border(1.dp, Color.Red)
+            .size(35.dp)
+    ) {
+        Text(gameController.getTileText(x, y))
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
     MinesweeperTheme {
-        Greeting("Android")
+        PlayGrid(10, 20)
+
     }
 }
