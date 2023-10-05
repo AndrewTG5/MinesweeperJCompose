@@ -3,6 +3,7 @@ package com.andrewblake.minesweeper
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
@@ -44,7 +46,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // populate tiles with mine and number blocks
-        var mineCount = 10
+        var mineCount = 35
         for (i in 0 until mineCount) {
             // randomly place mines
             val x = (0 until width).random()
@@ -80,7 +82,13 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    PlayGrid(width, height)
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        PlayGrid(width, height)
+                    }
 
                 }
             }
@@ -91,7 +99,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun PlayGrid(x: Int, y: Int) {
 
-    val tileIsDug = remember {
+    var tileIsDug = remember {
         Array(y) {
             Array(x) {
                 mutableStateOf(false)
@@ -119,9 +127,10 @@ fun PlayGrid(x: Int, y: Int) {
                                     Text(text = tileNearbyMines[i][j].toString())
                                 }
                             }
-                        },
-                        updateState = { tileIsDug[i][j].value = true }
-                    )
+                        }
+                    ) {
+                        tileIsDug = digTiles(j, i, tileIsDug)
+                    }
                 }
             }
         }
@@ -147,5 +156,24 @@ fun Tile(
         modifier = Modifier.size(35.dp)
     ) {
         text()
+    }
+}
+
+fun digTiles(x: Int, y: Int, tileIsDug: Array<Array<MutableState<Boolean>>>): Array<Array<MutableState<Boolean>>> {
+    var newtileIsDug = tileIsDug
+    return if (tileIsDug[y][x].value) {
+        newtileIsDug
+    } else {
+        tileIsDug[y][x].value = true
+        if (tileNearbyMines[y][x] == 0 && !tileIsMine[y][x]) {
+            for (i in -1..1) {
+                for (j in -1..1) {
+                    if (y + i in 0 until height && x + j in 0 until width) {
+                        newtileIsDug = digTiles(x + j, y + i, newtileIsDug) // recursively dig nearby tiles
+                    }
+                }
+            }
+        }
+        tileIsDug
     }
 }
