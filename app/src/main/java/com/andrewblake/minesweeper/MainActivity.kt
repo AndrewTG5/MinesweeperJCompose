@@ -8,16 +8,28 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
@@ -42,6 +54,7 @@ private var tileNearbyMines: Array<Array<Int>> =
     }
 
 class MainActivity : ComponentActivity() {
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -77,19 +90,58 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MinesweeperTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        PlayGrid(width, height)
-                    }
+                    var isDigging by remember { mutableStateOf(true) }
+                    Scaffold(
+                        topBar = {
+                            CenterAlignedTopAppBar(
+                                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    titleContentColor = MaterialTheme.colorScheme.primary,
+                                ),
+                                title = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("🚩")
+                                        Switch(
+                                            checked = isDigging,
+                                            onCheckedChange = {
+                                                isDigging = it
+                                            }
+                                        )
+                                        Text("⛏️")
+                                    }
+                                },
+                                navigationIcon = {
+                                    IconButton(onClick = { }) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Refresh,
+                                            contentDescription = "Localized description"
+                                        )
+                                    }
+                                },
+                                actions = {
+                                    Text("🚩 35")
+                                },
+                                scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(),
+                            )
+                        },
+                    ) { innerPadding ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            PlayGrid(width, height, isDigging)
+                        }
 
+                    }
                 }
             }
         }
@@ -97,9 +149,17 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun PlayGrid(x: Int, y: Int) {
+fun PlayGrid(x: Int, y: Int, isDigging: Boolean) {
 
     var tileIsDug = remember {
+        Array(y) {
+            Array(x) {
+                mutableStateOf(false)
+            }
+        }
+    }
+
+    val tileIsFlagged = remember {
         Array(y) {
             Array(x) {
                 mutableStateOf(false)
@@ -117,7 +177,11 @@ fun PlayGrid(x: Int, y: Int) {
                         isDug = tileIsDug[i][j],
                         text = {
                             if (!tileIsDug[i][j].value) {
-                                Text(text = " ")
+                                if (tileIsFlagged[i][j].value) {
+                                    Text(text = "🚩")
+                                } else {
+                                    Text(text = " ")
+                                }
                             } else {
                                 if (tileIsMine[i][j]) {
                                     Text(text = "💣")
@@ -129,7 +193,13 @@ fun PlayGrid(x: Int, y: Int) {
                             }
                         }
                     ) {
-                        tileIsDug = digTiles(j, i, tileIsDug)
+                        if (isDigging) {
+                            if (!tileIsFlagged[i][j].value) {
+                                tileIsDug = digTiles(j, i, tileIsDug)
+                            }
+                        } else {
+                            tileIsFlagged[i][j].value = !tileIsFlagged[i][j].value
+                        }
                     }
                 }
             }
