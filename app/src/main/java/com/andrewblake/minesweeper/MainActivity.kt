@@ -58,6 +58,20 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // reset tileIsMine and tileNearbyMines
+        tileIsMine =
+            Array(height) {
+                Array(width) {
+                    false
+                }
+            }
+        tileNearbyMines =
+            Array(height) {
+                Array(width) {
+                    0
+                }
+            }
+
         // populate tiles with mine and number blocks
         var mineCount = 35
         for (i in 0 until mineCount) {
@@ -117,7 +131,11 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 navigationIcon = {
-                                    IconButton(onClick = { }) {
+                                    IconButton(onClick = {
+                                        val mIntent = intent
+                                        finish()
+                                        startActivity(mIntent)
+                                    }) {
                                         Icon(
                                             imageVector = Icons.Filled.Refresh,
                                             contentDescription = "Localized description"
