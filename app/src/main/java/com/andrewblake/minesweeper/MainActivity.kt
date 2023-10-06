@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -38,6 +39,7 @@ import com.andrewblake.minesweeper.ui.theme.MinesweeperTheme
 
 private const val height: Int = 20
 private const val width: Int = 10
+private const val mines: Int = 35
 
 private var tileIsMine: Array<Array<Boolean>> =
     Array(height) {
@@ -73,7 +75,7 @@ class MainActivity : ComponentActivity() {
             }
 
         // populate tiles with mine and number blocks
-        var mineCount = 35
+        var mineCount = mines
         for (i in 0 until mineCount) {
             // randomly place mines
             val x = (0 until width).random()
@@ -109,6 +111,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     var isDigging by remember { mutableStateOf(true) }
+                    var flagsPlaced by remember { mutableStateOf(0) }
                     Scaffold(
                         topBar = {
                             CenterAlignedTopAppBar(
@@ -143,7 +146,8 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 actions = {
-                                    Text("🚩 35")
+                                    val remainingMines = mines - flagsPlaced
+                                    Text("🚩 $remainingMines")
                                 },
                                 scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(),
                             )
@@ -156,67 +160,111 @@ class MainActivity : ComponentActivity() {
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            PlayGrid(width, height, isDigging)
-                        }
-
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun PlayGrid(x: Int, y: Int, isDigging: Boolean) {
-
-    var tileIsDug = remember {
-        Array(y) {
-            Array(x) {
-                mutableStateOf(false)
-            }
-        }
-    }
-
-    val tileIsFlagged = remember {
-        Array(y) {
-            Array(x) {
-                mutableStateOf(false)
-            }
-        }
-    }
-
-    Column {
-        for (i in 0 until y) {
-            Row {
-                for (j in 0 until x) {
-                    Tile(
-                        x = j,
-                        y = i,
-                        isDug = tileIsDug[i][j],
-                        text = {
-                            if (!tileIsDug[i][j].value) {
-                                if (tileIsFlagged[i][j].value) {
-                                    Text(text = "🚩")
-                                } else {
-                                    Text(text = " ")
-                                }
-                            } else {
-                                if (tileIsMine[i][j]) {
-                                    Text(text = "💣")
-                                } else if (tileNearbyMines[i][j] == 0) {
-                                    Text(text = " ")
-                                } else {
-                                    Text(text = tileNearbyMines[i][j].toString())
+                            var tileIsDug = remember {
+                                Array(height) {
+                                    Array(width) {
+                                        mutableStateOf(false)
+                                    }
                                 }
                             }
-                        }
-                    ) {
-                        if (isDigging) {
-                            if (!tileIsFlagged[i][j].value) {
-                                tileIsDug = digTiles(j, i, tileIsDug)
+
+                            val tileIsFlagged = remember {
+                                Array(height) {
+                                    Array(width) {
+                                        mutableStateOf(false)
+                                    }
+                                }
                             }
-                        } else {
-                            tileIsFlagged[i][j].value = !tileIsFlagged[i][j].value
+
+                            var showDialog by remember { // 0 = none, 1 = win, 2 = lose
+                                mutableStateOf(0)
+                            }
+
+                            if (showDialog != 0) {
+                                AlertDialog(
+                                    onDismissRequest = {
+                                        showDialog = 0
+                                    },
+                                    title = {
+                                        Text(
+                                            text = if (showDialog == 1) {
+                                                "You Win!"
+                                            } else {
+                                                "You Lose!"
+                                            }
+                                        )
+                                    },
+                                    text = {
+                                        Text(
+                                            text = if (showDialog == 1) {
+                                                "You have won the game!"
+                                            } else {
+                                                "You have lost the game!"
+                                            }
+                                        )
+                                    },
+                                    confirmButton = {
+                                        Button(
+                                            onClick = {
+                                                val mIntent = intent
+                                                finish()
+                                                startActivity(mIntent)
+                                            }
+                                        ) {
+                                            Text(text = "Play Again")
+                                        }
+                                    }
+                                )
+                            }
+
+                            Column {
+                                for (i in 0 until height) {
+                                    Row {
+                                        for (j in 0 until width) {
+                                            Tile(
+                                                x = j,
+                                                y = i,
+                                                isDug = tileIsDug[i][j],
+                                                text = {
+                                                    if (!tileIsDug[i][j].value) {
+                                                        if (tileIsFlagged[i][j].value) {
+                                                            Text(text = "🚩")
+                                                        } else {
+                                                            Text(text = " ")
+                                                        }
+                                                    } else {
+                                                        if (tileIsMine[i][j]) {
+                                                            Text(text = "💣")
+                                                        } else if (tileNearbyMines[i][j] == 0) {
+                                                            Text(text = " ")
+                                                        } else {
+                                                            Text(text = tileNearbyMines[i][j].toString())
+                                                        }
+                                                    }
+                                                }
+                                            ) {
+                                                if (isDigging) {
+                                                    if (!tileIsFlagged[i][j].value) {
+                                                        tileIsDug = digTiles(j, i, tileIsDug)
+                                                    }
+                                                } else {
+                                                    tileIsFlagged[i][j].value = !tileIsFlagged[i][j].value
+                                                    if (tileIsFlagged[i][j].value) {
+                                                        flagsPlaced++
+                                                    } else {
+                                                        flagsPlaced--
+                                                    }
+                                                }
+                                                if (checkLost(tileIsDug)) {
+                                                    showDialog = 2
+                                                } else if (checkWin(tileIsFlagged)) {
+                                                    showDialog = 1
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -253,7 +301,17 @@ fun digTiles(x: Int, y: Int, tileIsDug: Array<Array<MutableState<Boolean>>>): Ar
         newtileIsDug
     } else {
         tileIsDug[y][x].value = true
-        if (tileNearbyMines[y][x] == 0 && !tileIsMine[y][x]) {
+
+        if (tileIsMine[y][x]) {
+            // dig every mine
+            for (i in 0 until height) {
+                for (j in 0 until width) {
+                    if (tileIsMine[i][j]) {
+                        newtileIsDug[i][j].value = true
+                    }
+                }
+            }
+        } else if (tileNearbyMines[y][x] == 0 && !tileIsMine[y][x]) {
             for (i in -1..1) {
                 for (j in -1..1) {
                     if (y + i in 0 until height && x + j in 0 until width) {
@@ -264,4 +322,28 @@ fun digTiles(x: Int, y: Int, tileIsDug: Array<Array<MutableState<Boolean>>>): Ar
         }
         tileIsDug
     }
+}
+
+fun checkLost(tileIsDug: Array<Array<MutableState<Boolean>>>): Boolean {
+    var lost = false
+    for (i in 0 until height) {
+        for (j in 0 until width) {
+            if (tileIsDug[i][j].value && tileIsMine[i][j]) {
+                lost = true
+            }
+        }
+    }
+    return lost
+}
+
+fun checkWin(tileIsFlagged: Array<Array<MutableState<Boolean>>>): Boolean {
+    var win = true
+    for (i in 0 until height) {
+        for (j in 0 until width) {
+            if (tileIsMine[i][j] && !tileIsFlagged[i][j].value || !tileIsMine[i][j] && tileIsFlagged[i][j].value) {
+                win = false
+            }
+        }
+    }
+    return win
 }
