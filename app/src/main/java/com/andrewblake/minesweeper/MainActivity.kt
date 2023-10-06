@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // reset tileIsMine and tileNearbyMines
+        // reset tileIsMine and tileNearbyMines, for when the user presses the refresh button
         tileIsMine =
             Array(height) {
                 Array(width) {
@@ -84,20 +84,11 @@ class MainActivity : ComponentActivity() {
             if (!tileIsMine[y][x]) {
                 tileIsMine[y][x] = true
                 mineCount--
-            }
-        }
-        // populate tiles with number blocks, find all mines and increment nearby tiles
-        for (i in 0 until height) {
-            for (j in 0 until width) {
-                if (tileIsMine[i][j]) {
-                    // increment nearby tiles
-                    for (k in -1..1) {
-                        for (l in -1..1) {
-                            if (i + k in 0 until height && j + l in 0 until width) {
-                                if (!tileIsMine[i + k][j + l]) {
-                                    tileNearbyMines[i + k][j + l]++
-                                }
-                            }
+                // increment nearby tiles
+                for (k in -1..1) {
+                    for (l in -1..1) {
+                        if (y + k in 0 until height && x + l in 0 until width) {
+                            tileNearbyMines[y + k][x + l]++
                         }
                     }
                 }
@@ -119,7 +110,7 @@ class MainActivity : ComponentActivity() {
                                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                                     titleContentColor = MaterialTheme.colorScheme.primary,
                                 ),
-                                title = {
+                                title = { // toggle between digging and flagging
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -133,20 +124,20 @@ class MainActivity : ComponentActivity() {
                                         Text("⛏️")
                                     }
                                 },
-                                navigationIcon = {
+                                navigationIcon = { // refresh button, to start a new game
                                     IconButton(onClick = {
                                         val mIntent = intent
-                                        finish()
+                                        finish() // restart activity to make a new game
                                         startActivity(mIntent)
                                     }) {
                                         Icon(
                                             imageVector = Icons.Filled.Refresh,
-                                            contentDescription = "Localized description"
+                                            contentDescription = "New game"
                                         )
                                     }
                                 },
                                 actions = {
-                                    val remainingMines = mines - flagsPlaced
+                                    val remainingMines = mines - flagsPlaced // display remaining mines
                                     Text("🚩 $remainingMines")
                                 },
                                 scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(),
@@ -218,7 +209,7 @@ class MainActivity : ComponentActivity() {
                             }
 
                             Column {
-                                for (i in 0 until height) {
+                                for (i in 0 until height) { // create tiles
                                     Row {
                                         for (j in 0 until width) {
                                             Tile(
@@ -226,14 +217,14 @@ class MainActivity : ComponentActivity() {
                                                 y = i,
                                                 isDug = tileIsDug[i][j],
                                                 text = {
-                                                    if (!tileIsDug[i][j].value) {
+                                                    if (!tileIsDug[i][j].value) { // display flag or blank
                                                         if (tileIsFlagged[i][j].value) {
                                                             Text(text = "🚩")
                                                         } else {
                                                             Text(text = " ")
                                                         }
                                                     } else {
-                                                        if (tileIsMine[i][j]) {
+                                                        if (tileIsMine[i][j]) { // display mine or number
                                                             Text(text = "💣")
                                                         } else if (tileNearbyMines[i][j] == 0) {
                                                             Text(text = " ")
@@ -242,7 +233,7 @@ class MainActivity : ComponentActivity() {
                                                         }
                                                     }
                                                 }
-                                            ) {
+                                            ) { // Tile onClick, to dig or flag
                                                 if (isDigging) {
                                                     if (!tileIsFlagged[i][j].value) {
                                                         tileIsDug = digTiles(j, i, tileIsDug)
@@ -255,7 +246,7 @@ class MainActivity : ComponentActivity() {
                                                         flagsPlaced--
                                                     }
                                                 }
-                                                if (checkLost(tileIsDug)) {
+                                                if (checkLost(tileIsDug)) { // check if lost or won
                                                     showDialog = 2
                                                 } else if (checkWin(tileIsFlagged)) {
                                                     showDialog = 1
@@ -274,6 +265,13 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
+        /**
+         * @param x X coordinate of tile in the board
+         * @param y Y coordinate of tile in the board
+         * @param isDug Whether the tile has been dug or not, from tileIsDug
+         * @param text Text to display in the tile, either flag or blank, mine or number
+         * @param updateState Function to update the state of the tile, either dig or flag
+         */
 fun Tile(
     x: Int,
     y: Int,
@@ -295,7 +293,17 @@ fun Tile(
     }
 }
 
-fun digTiles(x: Int, y: Int, tileIsDug: Array<Array<MutableState<Boolean>>>): Array<Array<MutableState<Boolean>>> {
+/**
+ * @param x X coordinate of tile to dig in the board
+ * @param y Y coordinate of tile to dig in the board
+ * @param tileIsDug Array of tiles that have been dug
+ * @return Array of tiles that have been dug, to update tileIsDug
+ */
+fun digTiles(
+    x: Int,
+    y: Int,
+    tileIsDug: Array<Array<MutableState<Boolean>>>
+): Array<Array<MutableState<Boolean>>> {
     var newtileIsDug = tileIsDug
     return if (tileIsDug[y][x].value) {
         newtileIsDug
@@ -315,7 +323,8 @@ fun digTiles(x: Int, y: Int, tileIsDug: Array<Array<MutableState<Boolean>>>): Ar
             for (i in -1..1) {
                 for (j in -1..1) {
                     if (y + i in 0 until height && x + j in 0 until width) {
-                        newtileIsDug = digTiles(x + j, y + i, newtileIsDug) // recursively dig nearby tiles
+                        newtileIsDug =
+                            digTiles(x + j, y + i, newtileIsDug) // recursively dig nearby tiles
                     }
                 }
             }
@@ -324,26 +333,32 @@ fun digTiles(x: Int, y: Int, tileIsDug: Array<Array<MutableState<Boolean>>>): Ar
     }
 }
 
+/**
+ * @param tileIsDug Array of tiles that have been dug
+ * @return Whether the user has lost or not (dug a mine)
+ */
 fun checkLost(tileIsDug: Array<Array<MutableState<Boolean>>>): Boolean {
-    var lost = false
     for (i in 0 until height) {
         for (j in 0 until width) {
             if (tileIsDug[i][j].value && tileIsMine[i][j]) {
-                lost = true
+                return true
             }
         }
     }
-    return lost
+    return false
 }
 
+/**
+ * @param tileIsFlagged Array of tiles that have been flagged
+ * @return Whether the user has won or not (flagged all mines). If the user has flagged a tile that is not a mine, they have not won.
+ */
 fun checkWin(tileIsFlagged: Array<Array<MutableState<Boolean>>>): Boolean {
-    var win = true
     for (i in 0 until height) {
         for (j in 0 until width) {
             if (tileIsMine[i][j] && !tileIsFlagged[i][j].value || !tileIsMine[i][j] && tileIsFlagged[i][j].value) {
-                win = false
+                return false
             }
         }
     }
-    return win
+    return true
 }
