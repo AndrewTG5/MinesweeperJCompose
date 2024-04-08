@@ -6,14 +6,17 @@ This is a Minesweeper game written in Kotlin using Jetpack Compose.
 
 
 Some cool features:
+- MVVM architecture
 - Material3 Dynamic Color
 - Predictive back gesture
 
 TODO:
-- Make the game configurable
+- Make the game board configurable
 - Add a timer
 - Generate the board based on the first click
 - Allow non portrait orientation
 - Improve performance
 - Make it so all tiles must be dug in order to win
 - Custom app icon
+- Allow the user to make some mistakes
+- Add Konfetti
