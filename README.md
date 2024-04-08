@@ -20,4 +20,3 @@ TODO:
 - Allow the user to make some mistakes
 - Add hints
 - Add Konfetti
-- Add vibration

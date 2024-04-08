@@ -12,7 +12,7 @@ class MinesweeperViewModel : ViewModel() {
 
     val HEIGHT: Int = 20
     val WIDTH: Int = 10
-    val MINES: Int = 5
+    val MINES: Int = 35
 
     init {
         newGame()

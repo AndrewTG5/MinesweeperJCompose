@@ -1,5 +1,7 @@
 package com.andrewblake.minesweeper
 
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,6 +41,9 @@ import androidx.compose.ui.unit.dp
 fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
     val uiState = viewModel.minesweeperUiState.collectAsState()
     var isDigging by remember { mutableStateOf(true) }
+
+    val context = LocalContext.current
+    val vibrator = context.getSystemService(Vibrator::class.java)
 
     Scaffold(
         modifier = Modifier
@@ -57,6 +63,7 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
                         Switch(
                             checked = isDigging,
                             onCheckedChange = {
+                                vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
                                 isDigging = it
                             }
                         )
@@ -65,6 +72,7 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
                 },
                 navigationIcon = { // refresh button, to start a new game
                     IconButton(onClick = {
+                        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
                         viewModel.newGame()
                     }) {
                         Icon(
@@ -145,12 +153,18 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
                             },
                             onClick = {
                                 if (isDigging) {
+                                    if (uiState.value.tiles[i][j].isMine) {
+                                        vibrator.vibrate(VibrationEffect.startComposition().addPrimitive(VibrationEffect.Composition.PRIMITIVE_THUD).compose())
+                                    } else {
+                                        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK))
+                                    }
                                     if (uiState.value.state == -1) {
                                         viewModel.initBoard(j, i)
                                     } else {
                                         viewModel.digTile(j, i)
                                     }
                                 } else {
+                                    vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
                                     viewModel.flagTile(j, i)
                                 }
                             }
