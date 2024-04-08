@@ -13,10 +13,11 @@ Some cool features:
 TODO:
 - Make the game board configurable
 - Add a timer
-- Generate the board based on the first click
 - Allow non portrait orientation
 - Improve performance
-- Make it so all tiles must be dug in order to win
+- Replace emojis with icons
 - Custom app icon
 - Allow the user to make some mistakes
+- Add hints
 - Add Konfetti
+- Add vibration

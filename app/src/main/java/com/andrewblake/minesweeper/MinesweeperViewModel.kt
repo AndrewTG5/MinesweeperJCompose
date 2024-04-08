@@ -12,19 +12,25 @@ class MinesweeperViewModel : ViewModel() {
 
     val HEIGHT: Int = 20
     val WIDTH: Int = 10
-    val MINES: Int = 35
+    val MINES: Int = 5
 
     init {
-        initBoard()
+        newGame()
     }
 
-    private fun initBoard() {
+    fun initBoard(X: Int, Y: Int) {
         var minesLeft = MINES // Number of mines left to place
         val tiles = MutableList(HEIGHT) { MutableList(WIDTH) { Tile() } }
 
         while (minesLeft > 0) {
-            val x = (0 until WIDTH).random()
-            val y = (0 until HEIGHT).random()
+            var x: Int
+            var y: Int
+
+            do {
+                x = (0 until WIDTH).random()
+                y = (0 until HEIGHT).random()
+            } while (x in X - 1..X + 1 && y in Y - 1..Y + 1) // make sure there are no mines within 1 tile of the first click
+
             if (!tiles[y][x].isMine) { // If the tile is not already a mine
                 tiles[y][x] = tiles[y][x].copy(isMine = true)
                 minesLeft--
@@ -41,12 +47,14 @@ class MinesweeperViewModel : ViewModel() {
         }
 
         updateTileList(tiles)
+        updateState(0)
+        digTile(X, Y)
     }
 
 
     fun newGame() {
-        updateState(0)
-        initBoard()
+        updateState(-1)
+        updateTileList(List(HEIGHT) { List(WIDTH) { Tile() } })
     }
 
     fun flagTile(x: Int, y: Int) {
@@ -70,6 +78,7 @@ class MinesweeperViewModel : ViewModel() {
             return
         }
         if (minesweeperUiState.value.tiles[y][x].isMine) {
+            updateState(2)
             // dig every mine
             val newList = minesweeperUiState.value.tiles.map { row ->
                 row.map { tile ->
@@ -77,7 +86,6 @@ class MinesweeperViewModel : ViewModel() {
                 }
             }
             updateTileList(newList)
-            updateState(2)
         } else {
             // dig the tile
             val newList = minesweeperUiState.value.tiles.toMutableList().map { it.toMutableList() }
@@ -96,7 +104,7 @@ class MinesweeperViewModel : ViewModel() {
             for (i in -1..1) {
                 for (j in -1..1) {
                     if (y + i in 0 until HEIGHT && x + j in 0 until WIDTH) {
-                        newTiles = digTiles(x + j, y + i, newTiles)
+                        newTiles = digTiles(x + j, y + i, newTiles) // recursively dig surrounding tiles
                     }
                 }
             }
@@ -108,7 +116,7 @@ class MinesweeperViewModel : ViewModel() {
     private fun checkWin() {
         // Check if all mines are flagged
         val win = minesweeperUiState.value.tiles.flatten().all { tile ->
-            (tile.isMine && tile.isFlagged) || (!tile.isMine && !tile.isFlagged)
+            (tile.isMine && tile.isFlagged) || (!tile.isMine && !tile.isFlagged && tile.isDug) // mine is flagged or tile is not a mine and is dug
         }
         if (win) {
             updateState(1)

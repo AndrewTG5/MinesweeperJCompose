@@ -81,7 +81,7 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
         },
     ) { innerPadding ->
 
-        if (uiState.value.state != 0) {
+        if (uiState.value.state > 0) {
             AlertDialog(
                 onDismissRequest = { viewModel.updateState(0) },
                 title = {
@@ -145,7 +145,11 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
                             },
                             onClick = {
                                 if (isDigging) {
-                                    viewModel.digTile(j, i)
+                                    if (uiState.value.state == -1) {
+                                        viewModel.initBoard(j, i)
+                                    } else {
+                                        viewModel.digTile(j, i)
+                                    }
                                 } else {
                                     viewModel.flagTile(j, i)
                                 }
