@@ -19,28 +19,32 @@ class MinesweeperViewModel : ViewModel() {
     }
 
     fun initBoard(X: Int, Y: Int) {
-        var minesLeft = MINES // Number of mines left to place
         val tiles = MutableList(HEIGHT) { MutableList(WIDTH) { Tile() } }
+        val positions = mutableListOf<Pair<Int, Int>>()
 
-        while (minesLeft > 0) {
-            var x: Int
-            var y: Int
+        // Generate all possible positions
+        for (x in 0 until WIDTH) {
+            for (y in 0 until HEIGHT) {
+                if (!(x in X - 1..X + 1 && y in Y - 1..Y + 1)) { // Exclude tiles within 1 of the first click
+                    positions.add(Pair(x, y))
+                }
+            }
+        }
 
-            do {
-                x = (0 until WIDTH).random()
-                y = (0 until HEIGHT).random()
-            } while (x in X - 1..X + 1 && y in Y - 1..Y + 1) // make sure there are no mines within 1 tile of the first click
+        // Shuffle the positions
+        positions.shuffle()
 
-            if (!tiles[y][x].isMine) { // If the tile is not already a mine
-                tiles[y][x] = tiles[y][x].copy(isMine = true)
-                minesLeft--
-                // Increment nearbyMines for all surrounding tiles
-                for (i in -1..1) {
-                    for (j in -1..1) {
-                        if (i == 0 && j == 0) continue
-                        if (x + i in 0 until WIDTH && y + j in 0 until HEIGHT) {
-                            tiles[y + j][x + i] = tiles[y + j][x + i].copy(nearbyMines = tiles[y + j][x + i].nearbyMines + 1)
-                        }
+        // Place the mines
+        for (i in 0 until MINES) {
+            val (x, y) = positions[i]
+            tiles[y][x] = tiles[y][x].copy(isMine = true)
+
+            // Increment nearbyMines for all surrounding tiles
+            for (dx in -1..1) {
+                for (dy in -1..1) {
+                    if (dx == 0 && dy == 0) continue
+                    if (x + dx in 0 until WIDTH && y + dy in 0 until HEIGHT) {
+                        tiles[y + dy][x + dx] = tiles[y + dy][x + dx].copy(nearbyMines = tiles[y + dy][x + dx].nearbyMines + 1)
                     }
                 }
             }
@@ -95,15 +99,12 @@ class MinesweeperViewModel : ViewModel() {
     }
 
     private fun digTiles(x: Int, y: Int, tiles: List<MutableList<Tile>>): List<MutableList<Tile>> {
-        if (tiles[y][x].isDug) {
-            return tiles
-        }
         var newTiles = tiles
         newTiles[y][x] = newTiles[y][x].copy(isDug = true)
         if (tiles[y][x].nearbyMines == 0) {
             for (i in -1..1) {
                 for (j in -1..1) {
-                    if (y + i in 0 until HEIGHT && x + j in 0 until WIDTH) {
+                    if (y + i in 0 until HEIGHT && x + j in 0 until WIDTH && !tiles[y + i][x + j].isDug && !tiles[y + i][x + j].isFlagged) {
                         newTiles = digTiles(x + j, y + i, newTiles) // recursively dig surrounding tiles
                     }
                 }
@@ -111,7 +112,6 @@ class MinesweeperViewModel : ViewModel() {
         }
         return newTiles
     }
-
 
     private fun checkWin() {
         // Check if all mines are flagged

@@ -153,10 +153,12 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
                             },
                             onClick = {
                                 if (isDigging) {
-                                    if (uiState.value.tiles[i][j].isMine) {
-                                        vibrator.vibrate(VibrationEffect.startComposition().addPrimitive(VibrationEffect.Composition.PRIMITIVE_THUD).compose())
-                                    } else {
-                                        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK))
+                                    if (!uiState.value.tiles[i][j].isFlagged) {
+                                        if (uiState.value.tiles[i][j].isMine) {
+                                            vibrator.vibrate(VibrationEffect.startComposition().addPrimitive(VibrationEffect.Composition.PRIMITIVE_THUD).compose())
+                                        } else {
+                                            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK))
+                                        }
                                     }
                                     if (uiState.value.state == -1) {
                                         viewModel.initBoard(j, i)
