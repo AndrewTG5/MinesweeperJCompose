@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
@@ -61,6 +62,7 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
                     ) {
                         Text("🚩")
                         Switch(
+                            modifier = Modifier.padding(8.dp, 0.dp, 8.dp, 0.dp),
                             checked = isDigging,
                             onCheckedChange = {
                                 vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
@@ -77,12 +79,14 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
                     }) {
                         Icon(
                             imageVector = Icons.Filled.Refresh,
-                            contentDescription = "New game"
+                            contentDescription = "New game",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                 },
                 actions = {
-                    Text("🚩 ${viewModel.MINES - uiState.value.tiles.flatten().count { it.isFlagged }}") // display remaining mines //TODO use error color if negative
+                    val count = viewModel.MINES - uiState.value.tiles.flatten().count { it.isFlagged }
+                    Text(modifier = Modifier.padding(end = 16.dp), text = "🚩 $count", color = if (count < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onPrimaryContainer) // display remaining flags to place
                 },
                 scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(),
             )
@@ -201,7 +205,7 @@ fun Tile(
             containerColor = if ((x + y) % 2 == 0) if (isDug) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary else if (isDug) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primaryContainer,
             contentColor = if ((x + y) % 2 == 0) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSecondaryContainer
         ),
-        modifier = Modifier.size(35.dp) //TODO: make this dynamic, use weight or screen width?
+        modifier = Modifier.size(LocalConfiguration.current.screenWidthDp.dp / (10+2)) //TODO: boardwidth +2, get this from the viewmodel
     ) {
         Text(text)
     }
