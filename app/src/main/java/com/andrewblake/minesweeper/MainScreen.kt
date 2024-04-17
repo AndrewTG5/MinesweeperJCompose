@@ -15,18 +15,21 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -35,12 +38,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
-    val uiState = viewModel.minesweeperUiState.collectAsState()
+    val uiState by viewModel.minesweeperUiState.collectAsState()
     var isDigging by remember { mutableStateOf(true) }
 
     val context = LocalContext.current
@@ -75,7 +80,7 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
                 navigationIcon = { // refresh button, to start a new game
                     IconButton(onClick = {
                         vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
-                        viewModel.newGame()
+                        viewModel.updateState(-2)
                     }) {
                         Icon(
                             imageVector = Icons.Filled.Refresh,
@@ -85,7 +90,7 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
                     }
                 },
                 actions = {
-                    val count = viewModel.MINES - uiState.value.tiles.flatten().count { it.isFlagged }
+                    val count = viewModel.MINES - uiState.tiles.flatten().count { it.isFlagged }
                     Text(modifier = Modifier.padding(end = 16.dp), text = "🚩 $count", color = if (count < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onPrimaryContainer) // display remaining flags to place
                 },
                 scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(),
@@ -93,12 +98,18 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
         },
     ) { innerPadding ->
 
-        if (uiState.value.state > 0) {
+        if (uiState.state == -2) {
+            DifficultyDialog(vibrator) { height, width, mines ->
+                viewModel.newGame(height, width, mines)
+            }
+        }
+
+        if (uiState.state > 0) {
             AlertDialog(
                 onDismissRequest = { viewModel.updateState(0) },
                 title = {
                     Text(
-                        text = if (uiState.value.state == 1) {
+                        text = if (uiState.state == 1) {
                             "You Win!"
                         } else {
                             "You Lose!"
@@ -107,7 +118,7 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
                 },
                 text = {
                     Text(
-                        text = if (uiState.value.state == 1) {
+                        text = if (uiState.state == 1) {
                             "You have won the game!"
                         } else {
                             "You have lost the game!"
@@ -117,7 +128,7 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
                 confirmButton = {
                     Button(
                         onClick = {
-                            viewModel.newGame()
+                            viewModel.updateState(-2)
                         }
                     ) {
                         Text(text = "Play Again")
@@ -133,38 +144,39 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            for (i in 0 until uiState.value.tiles.size) { // create tiles
+            for (i in 0 until uiState.tiles.size) { // create tiles
                 Row {
-                    for (j in 0 until uiState.value.tiles[i].size) {
+                    for (j in 0 until uiState.tiles[i].size) {
                         Tile(
                             x = j,
                             y = i,
-                            isDug = uiState.value.tiles[i][j].isDug,
-                            text = if (uiState.value.tiles[i][j].isDug) { // display flag or blank
-                                if (uiState.value.tiles[i][j].isMine) { // display mine or number
+                            isDug = uiState.tiles[i][j].isDug,
+                            text = if (uiState.tiles[i][j].isDug) { // display flag or blank
+                                if (uiState.tiles[i][j].isMine) { // display mine or number
                                     "💣"
-                                } else if (uiState.value.tiles[i][j].nearbyMines == 0) {
+                                } else if (uiState.tiles[i][j].nearbyMines == 0) {
                                     " "
                                 } else {
-                                    uiState.value.tiles[i][j].nearbyMines.toString()
+                                    uiState.tiles[i][j].nearbyMines.toString()
                                 }
                             } else {
-                                if (uiState.value.tiles[i][j].isFlagged) {
+                                if (uiState.tiles[i][j].isFlagged) {
                                     "🚩"
                                 } else {
                                     " "
                                 }
                             },
+                            size = LocalConfiguration.current.screenWidthDp.dp / (viewModel.WIDTH + 2), // size of tile. 2 extra tiles for padding
                             onClick = {
                                 if (isDigging) {
-                                    if (!uiState.value.tiles[i][j].isFlagged) {
-                                        if (uiState.value.tiles[i][j].isMine) {
+                                    if (!uiState.tiles[i][j].isFlagged) {
+                                        if (uiState.tiles[i][j].isMine) {
                                             vibrator.vibrate(VibrationEffect.startComposition().addPrimitive(VibrationEffect.Composition.PRIMITIVE_THUD).compose())
                                         } else {
                                             vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK))
                                         }
                                     }
-                                    if (uiState.value.state == -1) {
+                                    if (uiState.state == -1) {
                                         viewModel.initBoard(j, i)
                                     } else {
                                         viewModel.digTile(j, i)
@@ -195,6 +207,7 @@ fun Tile(
     y: Int,
     isDug: Boolean,
     text: String,
+    size: Dp,
     onClick: () -> Unit
 ) {
     Button(
@@ -205,8 +218,68 @@ fun Tile(
             containerColor = if ((x + y) % 2 == 0) if (isDug) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary else if (isDug) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primaryContainer,
             contentColor = if ((x + y) % 2 == 0) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSecondaryContainer
         ),
-        modifier = Modifier.size(LocalConfiguration.current.screenWidthDp.dp / (10+2)) //TODO: boardwidth +2, get this from the viewmodel
+        modifier = Modifier.size(size)
     ) {
         Text(text)
+    }
+}
+
+@Composable
+fun DifficultyDialog(
+    vibrator: Vibrator,
+    onConfirm: (Int, Int, Int) -> Unit,
+) {
+    var height by remember { mutableIntStateOf(20) }
+    var width by remember { mutableIntStateOf(10) }
+    var mines by remember { mutableIntStateOf(35) }
+
+    Dialog(onDismissRequest = { }) {
+        // 3 sliders, one for height, one for width, one for mines
+        // the height must always be double the width
+        // the mine slider is a percent of the board that will be mines
+
+        Card(
+            modifier = Modifier.padding(16.dp),
+            shape = MaterialTheme.shapes.medium,
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("Width: $width, Height: $height", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Slider(
+                    value = width.toFloat(),
+                    onValueChange = {
+                        if (width != it.toInt()) {
+                            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
+                            width = it.toInt()
+                            height = it.toInt() * 2
+                            mines = (width*height)/5
+                        }
+                    },
+                    valueRange = 5f..15f,
+                    steps = 9,
+                )
+                Text("Mines: $mines", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Slider(
+                    value = mines.toFloat(),
+                    onValueChange = {
+                        if (mines != it.toInt()) {
+                            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
+                            mines = it.toInt()
+                        }
+                    },
+                    valueRange = ((width*height)/10).toFloat()..((width*height)/2).toFloat(),
+                    steps = ((width*height)/2) - ((width*height)/10)
+                )
+                Button(
+                    onClick = {
+                        onConfirm(height, width, mines)
+                    }
+                ) {
+                    Text("Start Game")
+                }
+            }
+        }
     }
 }

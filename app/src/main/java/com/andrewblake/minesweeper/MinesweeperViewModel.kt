@@ -10,13 +10,9 @@ class MinesweeperViewModel : ViewModel() {
     private val _minesweeperUiState = MutableStateFlow(MinesweeperUiState())
     val minesweeperUiState: StateFlow<MinesweeperUiState> = _minesweeperUiState.asStateFlow()
 
-    val HEIGHT: Int = 20
-    val WIDTH: Int = 10
-    val MINES: Int = 35
-
-    init {
-        newGame()
-    }
+    var HEIGHT: Int = 20
+    var WIDTH: Int = 10
+    var MINES: Int = 35
 
     fun initBoard(X: Int, Y: Int) {
         val tiles = MutableList(HEIGHT) { MutableList(WIDTH) { Tile() } }
@@ -55,8 +51,10 @@ class MinesweeperViewModel : ViewModel() {
         digTile(X, Y)
     }
 
-
-    fun newGame() {
+    fun newGame(height: Int, width: Int, mines: Int) {
+        HEIGHT = height
+        WIDTH = width
+        MINES = mines
         updateState(-1)
         updateTileList(List(HEIGHT) { List(WIDTH) { Tile() } })
     }

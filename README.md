@@ -11,7 +11,6 @@ Some cool features:
 - Predictive back gesture
 
 TODO:
-- Make the game board configurable
 - Add a timer
 - Allow non portrait orientation
 - Improve performance
