@@ -7,7 +7,7 @@ This is a Minesweeper game written in Kotlin using Jetpack Compose.
 
 Some cool features:
 - MVVM architecture
-- Material3 Dynamic Color
+- Material3 Dynamic Color (Including monochrome app icon)
 - Predictive back gesture
 
 TODO:
@@ -15,7 +15,6 @@ TODO:
 - Allow non portrait orientation
 - Improve performance
 - Replace emojis with icons
-- Custom app icon
 - Allow the user to make some mistakes
 - Add hints
 - Add Konfetti
