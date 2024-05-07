@@ -13,7 +13,6 @@ Some cool features:
 TODO:
 - Add a timer
 - Allow non portrait orientation
-- Improve performance
 - Replace emojis with icons
 - Allow the user to make some mistakes
 - Add hints
