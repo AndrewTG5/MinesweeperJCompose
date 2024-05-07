@@ -1,4 +1,4 @@
-# MinesweeperJCompose
+# CleanSweeper
 
 This is a Minesweeper game written in Kotlin using Jetpack Compose.
 
