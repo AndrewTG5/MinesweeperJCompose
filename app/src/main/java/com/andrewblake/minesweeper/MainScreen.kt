@@ -90,7 +90,7 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
                     }
                 },
                 actions = {
-                    val count = viewModel.MINES - uiState.tiles.flatten().count { it.isFlagged }
+                    val count = uiState.mines - uiState.tiles.flatten().count { it.isFlagged }
                     Text(modifier = Modifier.padding(end = 16.dp), text = "🚩 $count", color = if (count < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onPrimaryContainer) // display remaining flags to place
                 },
                 scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(),
@@ -144,9 +144,10 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            for (i in 0 until uiState.tiles.size) { // create tiles
+            val size = LocalConfiguration.current.screenWidthDp.dp / (uiState.width + 2) // size of tile. 2 extra tiles for padding
+            for (i in 0 until uiState.height) { // create tiles
                 Row {
-                    for (j in 0 until uiState.tiles[i].size) {
+                    for (j in 0 until uiState.width) {
                         Tile(
                             x = j,
                             y = i,
@@ -166,7 +167,7 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
                                     " "
                                 }
                             },
-                            size = LocalConfiguration.current.screenWidthDp.dp / (viewModel.WIDTH + 2), // size of tile. 2 extra tiles for padding
+                            size = size,
                             onClick = {
                                 if (isDigging) {
                                     if (!uiState.tiles[i][j].isFlagged) {

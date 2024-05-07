@@ -10,17 +10,13 @@ class MinesweeperViewModel : ViewModel() {
     private val _minesweeperUiState = MutableStateFlow(MinesweeperUiState())
     val minesweeperUiState: StateFlow<MinesweeperUiState> = _minesweeperUiState.asStateFlow()
 
-    var HEIGHT: Int = 20
-    var WIDTH: Int = 10
-    var MINES: Int = 35
-
     fun initBoard(X: Int, Y: Int) {
-        val tiles = MutableList(HEIGHT) { MutableList(WIDTH) { Tile() } }
+        val tiles = MutableList(minesweeperUiState.value.height) { MutableList(minesweeperUiState.value.width) { Tile() } }
         val positions = mutableListOf<Pair<Int, Int>>()
 
         // Generate all possible positions
-        for (x in 0 until WIDTH) {
-            for (y in 0 until HEIGHT) {
+        for (x in 0 until minesweeperUiState.value.width) {
+            for (y in 0 until minesweeperUiState.value.height) {
                 if (!(x in X - 1..X + 1 && y in Y - 1..Y + 1)) { // Exclude tiles within 1 of the first click
                     positions.add(Pair(x, y))
                 }
@@ -31,7 +27,7 @@ class MinesweeperViewModel : ViewModel() {
         positions.shuffle()
 
         // Place the mines
-        for (i in 0 until MINES) {
+        for (i in 0 until minesweeperUiState.value.mines) {
             val (x, y) = positions[i]
             tiles[y][x] = tiles[y][x].copy(isMine = true)
 
@@ -39,7 +35,7 @@ class MinesweeperViewModel : ViewModel() {
             for (dx in -1..1) {
                 for (dy in -1..1) {
                     if (dx == 0 && dy == 0) continue
-                    if (x + dx in 0 until WIDTH && y + dy in 0 until HEIGHT) {
+                    if (x + dx in 0 until minesweeperUiState.value.width && y + dy in 0 until minesweeperUiState.value.height) {
                         tiles[y + dy][x + dx] = tiles[y + dy][x + dx].copy(nearbyMines = tiles[y + dy][x + dx].nearbyMines + 1)
                     }
                 }
@@ -52,11 +48,11 @@ class MinesweeperViewModel : ViewModel() {
     }
 
     fun newGame(height: Int, width: Int, mines: Int) {
-        HEIGHT = height
-        WIDTH = width
-        MINES = mines
+        _minesweeperUiState.update {
+            it.copy(height = height, width = width, mines = mines)
+        }
         updateState(-1)
-        updateTileList(List(HEIGHT) { List(WIDTH) { Tile() } })
+        updateTileList(List(height) { List(width) { Tile() } })
     }
 
     fun flagTile(x: Int, y: Int) {
@@ -102,7 +98,7 @@ class MinesweeperViewModel : ViewModel() {
         if (tiles[y][x].nearbyMines == 0) {
             for (i in -1..1) {
                 for (j in -1..1) {
-                    if (y + i in 0 until HEIGHT && x + j in 0 until WIDTH && !tiles[y + i][x + j].isDug && !tiles[y + i][x + j].isFlagged) {
+                    if (y + i in 0 until minesweeperUiState.value.height && x + j in 0 until minesweeperUiState.value.width && !tiles[y + i][x + j].isDug && !tiles[y + i][x + j].isFlagged) {
                         newTiles = digTiles(x + j, y + i, newTiles) // recursively dig surrounding tiles
                     }
                 }
