@@ -17,3 +17,4 @@ TODO:
 - Allow the user to make some mistakes
 - Add hints
 - Add Konfetti
+- Use string resources

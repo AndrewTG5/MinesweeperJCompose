@@ -144,7 +144,7 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val size = LocalConfiguration.current.screenWidthDp.dp / (uiState.width + 2) // size of tile. 2 extra tiles for padding
+            val size = minOf(LocalConfiguration.current.screenWidthDp.dp / (uiState.width + 2), LocalConfiguration.current.screenHeightDp.dp / (uiState.height + 3)) // size of tile. extra tiles for padding
             for (i in 0 until uiState.height) { // create tiles
                 Row {
                     for (j in 0 until uiState.width) {
