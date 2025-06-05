@@ -108,9 +108,9 @@ class MinesweeperViewModel : ViewModel() {
     }
 
     private fun checkWin() {
-        // Check if all mines are flagged
+        // Check if all non-mine tiles are dug
         val win = minesweeperUiState.value.tiles.flatten().all { tile ->
-            (tile.isMine && tile.isFlagged) || (!tile.isMine && !tile.isFlagged && tile.isDug) // mine is flagged or tile is not a mine and is dug
+            tile.isMine || tile.isDug // tile is either a mine or is dug
         }
         if (win) {
             updateState(1)

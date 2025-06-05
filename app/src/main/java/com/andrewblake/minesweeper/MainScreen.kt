@@ -271,7 +271,17 @@ fun DifficultyDialog(
                         }
                     },
                     valueRange = ((width*height)/10).toFloat()..((width*height)/2).toFloat(),
-                    steps = ((width*height)/2) - ((width*height)/10)
+                    steps = {
+                        val maxMines = (width*height)/2
+                        val minMines = (width*height)/10
+                        val totalRange = maxMines - minMines
+                        val stepSize = when {
+                            maxMines > 100 -> 5
+                            maxMines > 50 -> 2
+                            else -> 1
+                        }
+                        totalRange / stepSize
+                    }()
                 )
                 Button(
                     onClick = {
