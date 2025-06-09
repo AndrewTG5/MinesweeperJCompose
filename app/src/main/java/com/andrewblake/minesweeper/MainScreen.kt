@@ -7,10 +7,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -18,13 +24,16 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -44,7 +53,7 @@ import androidx.compose.ui.window.Dialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
+fun MainScreen(viewModel: MinesweeperViewModel) {
     val uiState by viewModel.minesweeperUiState.collectAsState()
     var isDigging by remember { mutableStateOf(true) }
 
@@ -99,9 +108,19 @@ fun MainScreen(viewModel: MinesweeperViewModel = MinesweeperViewModel()) {
     ) { innerPadding ->
 
         if (uiState.state == -2) {
-            DifficultyDialog(vibrator) { height, width, mines ->
-                viewModel.newGame(height, width, mines)
-            }
+            DifficultyDialog(
+                vibrator = vibrator, 
+                presets = uiState.presets,
+                onConfirm = { height, width, mines ->
+                    viewModel.newGame(height, width, mines)
+                },
+                onSavePreset = { name, width, height, mines ->
+                    viewModel.savePreset(name, width, height, mines)
+                },
+                onDeletePreset = { name ->
+                    viewModel.deletePreset(name)
+                }
+            )
         }
 
         if (uiState.state > 0) {
@@ -228,26 +247,32 @@ fun Tile(
 @Composable
 fun DifficultyDialog(
     vibrator: Vibrator,
+    presets: List<DifficultyPreset>,
     onConfirm: (Int, Int, Int) -> Unit,
+    onSavePreset: (String, Int, Int, Int) -> Unit,
+    onDeletePreset: (String) -> Unit
 ) {
     var height by remember { mutableIntStateOf(20) }
     var width by remember { mutableIntStateOf(10) }
     var mines by remember { mutableIntStateOf(35) }
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var presetName by remember { mutableStateOf("") }
 
     Dialog(onDismissRequest = { }) {
-        // 3 sliders, one for height, one for width, one for mines
-        // the height must always be double the width
-        // the mine slider is a percent of the board that will be mines
-
         Card(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             shape = MaterialTheme.shapes.medium,
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Width: $width, Height: $height", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Text("Width: $width, Height: $height", 
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface)
+                
                 Slider(
                     value = width.toFloat(),
                     onValueChange = {
@@ -261,7 +286,11 @@ fun DifficultyDialog(
                     valueRange = 5f..15f,
                     steps = 9,
                 )
-                Text("Mines: $mines", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                
+                Text("Mines: $mines", 
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface)
+                
                 Slider(
                     value = mines.toFloat(),
                     onValueChange = {
@@ -283,14 +312,120 @@ fun DifficultyDialog(
                         totalRange / stepSize
                     }()
                 )
-                Button(
-                    onClick = {
-                        onConfirm(height, width, mines)
+                
+                // Presets section
+                if (presets.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Saved Presets:", 
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface)
+                    
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
+                    ) {
+                        items(presets) { preset ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        width = preset.width
+                                        height = preset.height
+                                        mines = preset.mines
+                                        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        text = "${preset.name} (${preset.width}×${preset.height}, ${preset.mines} mines)",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                
+                                IconButton(
+                                    onClick = {
+                                        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK))
+                                        onDeletePreset(preset.name)
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete preset",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                            HorizontalDivider()
+                        }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Start Game")
+                    Button(
+                        onClick = {
+                            showSaveDialog = true
+                        }
+                    ) {
+                        Text("Save Preset")
+                    }
+                    
+                    Button(
+                        onClick = {
+                            onConfirm(height, width, mines)
+                        }
+                    ) {
+                        Text("Start Game")
+                    }
                 }
             }
         }
+    }
+    
+    if (showSaveDialog) {
+        AlertDialog(
+            onDismissRequest = { showSaveDialog = false },
+            title = { Text("Save Preset") },
+            text = {
+                OutlinedTextField(
+                    value = presetName,
+                    onValueChange = { presetName = it },
+                    label = { Text("Preset Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (presetName.isNotBlank()) {
+                            onSavePreset(presetName, width, height, mines)
+                            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+                            showSaveDialog = false
+                            presetName = ""
+                        }
+                    },
+                    enabled = presetName.isNotBlank()
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showSaveDialog = false }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

@@ -1,14 +1,29 @@
 package com.andrewblake.minesweeper
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
+import androidx.lifecycle.AndroidViewModel
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import androidx.core.content.edit
 
-class MinesweeperViewModel : ViewModel() {
+class MinesweeperViewModel(application: Application) : AndroidViewModel(application) {
     private val _minesweeperUiState = MutableStateFlow(MinesweeperUiState())
     val minesweeperUiState: StateFlow<MinesweeperUiState> = _minesweeperUiState.asStateFlow()
+    
+    private val sharedPreferences: SharedPreferences = application.getSharedPreferences(
+        "minesweeper_preferences", Context.MODE_PRIVATE
+    )
+    private val gson = Gson()
+    
+    init {
+        loadPresets()
+    }
 
     fun initBoard(X: Int, Y: Int) {
         val tiles = MutableList(minesweeperUiState.value.height) { MutableList(minesweeperUiState.value.width) { Tile() } }
@@ -130,4 +145,50 @@ class MinesweeperViewModel : ViewModel() {
         }
     }
 
+    // Presets functions
+    private fun loadPresets() {
+        val presetsJson = sharedPreferences.getString("difficulty_presets", null)
+        if (presetsJson != null) {
+            val type = object : TypeToken<List<DifficultyPreset>>() {}.type
+            val loadedPresets = gson.fromJson<List<DifficultyPreset>>(presetsJson, type)
+            _minesweeperUiState.update {
+                it.copy(presets = loadedPresets)
+            }
+        }
+    }
+
+    fun savePreset(name: String, width: Int, height: Int, mines: Int) {
+        val newPreset = DifficultyPreset(name, width, height, mines)
+        val updatedPresets = _minesweeperUiState.value.presets.toMutableList()
+        
+        // Replace existing preset with same name or add new one
+        val existingIndex = updatedPresets.indexOfFirst { it.name == name }
+        if (existingIndex >= 0) {
+            updatedPresets[existingIndex] = newPreset
+        } else {
+            updatedPresets.add(newPreset)
+        }
+        
+        // Update SharedPreferences
+        val presetsJson = gson.toJson(updatedPresets)
+        sharedPreferences.edit { putString("difficulty_presets", presetsJson) }
+        
+        // Update UI state
+        _minesweeperUiState.update {
+            it.copy(presets = updatedPresets)
+        }
+    }
+
+    fun deletePreset(name: String) {
+        val updatedPresets = _minesweeperUiState.value.presets.filter { it.name != name }
+        
+        // Update SharedPreferences
+        val presetsJson = gson.toJson(updatedPresets)
+        sharedPreferences.edit { putString("difficulty_presets", presetsJson) }
+        
+        // Update UI state
+        _minesweeperUiState.update {
+            it.copy(presets = updatedPresets)
+        }
+    }
 }
