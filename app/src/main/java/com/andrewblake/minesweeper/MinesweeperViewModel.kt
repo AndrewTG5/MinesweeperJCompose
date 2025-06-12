@@ -57,14 +57,24 @@ class MinesweeperViewModel(application: Application) : AndroidViewModel(applicat
             }
         }
 
+        // Record the start time when the board is initialized
+        _minesweeperUiState.update {
+            it.copy(gameStartTime = System.currentTimeMillis())
+        }
+        
         updateTileList(tiles)
         updateState(0)
         digTile(X, Y)
     }
 
-    fun newGame(height: Int, width: Int, mines: Int) {
+    fun newGame(height: Int, width: Int, mines: Int, presetName: String? = null) {
         _minesweeperUiState.update {
-            it.copy(height = height, width = width, mines = mines)
+            it.copy(
+                height = height, 
+                width = width, 
+                mines = mines,
+                currentPresetName = presetName
+            )
         }
         updateState(-1)
         updateTileList(List(height) { List(width) { Tile() } })
@@ -128,10 +138,43 @@ class MinesweeperViewModel(application: Application) : AndroidViewModel(applicat
             tile.isMine || tile.isDug // tile is either a mine or is dug
         }
         if (win) {
+            // Calculate completion time
+            val currentTime = System.currentTimeMillis()
+            val elapsedTimeSeconds = ((currentTime - minesweeperUiState.value.gameStartTime) / 1000).toInt()
+            
+            // Check if this game was played with a preset
+            val presetName = minesweeperUiState.value.currentPresetName
+            if (presetName != null) {
+                updateBestTime(presetName, elapsedTimeSeconds)
+            }
+            
             updateState(1)
         }
     }
 
+    private fun updateBestTime(presetName: String, timeSeconds: Int) {
+        val updatedPresets = minesweeperUiState.value.presets.map { preset ->
+            if (preset.name == presetName) {
+                // Update only if it's a new best time or there was no previous best time
+                if (preset.bestTimeSeconds == null || timeSeconds < preset.bestTimeSeconds) {
+                    preset.copy(bestTimeSeconds = timeSeconds)
+                } else {
+                    preset
+                }
+            } else {
+                preset
+            }
+        }
+        
+        // Save updated presets to SharedPreferences
+        val presetsJson = gson.toJson(updatedPresets)
+        sharedPreferences.edit { putString("difficulty_presets", presetsJson) }
+        
+        // Update UI state
+        _minesweeperUiState.update {
+            it.copy(presets = updatedPresets)
+        }
+    }
 
     private fun updateTileList(newList: List<List<Tile>>) {
         _minesweeperUiState.update {
@@ -158,7 +201,11 @@ class MinesweeperViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun savePreset(name: String, width: Int, height: Int, mines: Int) {
-        val newPreset = DifficultyPreset(name, width, height, mines)
+        // Find existing preset to preserve best time if it exists
+        val existingPreset = _minesweeperUiState.value.presets.find { it.name == name }
+        val bestTime = existingPreset?.bestTimeSeconds
+        
+        val newPreset = DifficultyPreset(name, width, height, mines, bestTime)
         val updatedPresets = _minesweeperUiState.value.presets.toMutableList()
         
         // Replace existing preset with same name or add new one

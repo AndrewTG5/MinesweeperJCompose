@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -111,8 +112,8 @@ fun MainScreen(viewModel: MinesweeperViewModel) {
             DifficultyDialog(
                 vibrator = vibrator, 
                 presets = uiState.presets,
-                onConfirm = { height, width, mines ->
-                    viewModel.newGame(height, width, mines)
+                onConfirm = { height, width, mines, presetName ->
+                    viewModel.newGame(height, width, mines, presetName)
                 },
                 onSavePreset = { name, width, height, mines ->
                     viewModel.savePreset(name, width, height, mines)
@@ -248,7 +249,7 @@ fun Tile(
 fun DifficultyDialog(
     vibrator: Vibrator,
     presets: List<DifficultyPreset>,
-    onConfirm: (Int, Int, Int) -> Unit,
+    onConfirm: (Int, Int, Int, String?) -> Unit,
     onSavePreset: (String, Int, Int, Int) -> Unit,
     onDeletePreset: (String) -> Unit
 ) {
@@ -257,6 +258,7 @@ fun DifficultyDialog(
     var mines by remember { mutableIntStateOf(35) }
     var showSaveDialog by remember { mutableStateOf(false) }
     var presetName by remember { mutableStateOf("") }
+    var selectedPresetName: String? by remember { mutableStateOf(null) }
 
     Dialog(onDismissRequest = { }) {
         Card(
@@ -281,6 +283,7 @@ fun DifficultyDialog(
                             width = it.toInt()
                             height = it.toInt() * 2
                             mines = (width*height)/5
+                            selectedPresetName = null // Clear selected preset when manually changing values
                         }
                     },
                     valueRange = 5f..15f,
@@ -297,6 +300,7 @@ fun DifficultyDialog(
                         if (mines != it.toInt()) {
                             vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
                             mines = it.toInt()
+                            selectedPresetName = null // Clear selected preset when manually changing values
                         }
                     },
                     valueRange = ((width*height)/10).toFloat()..((width*height)/2).toFloat(),
@@ -333,25 +337,50 @@ fun DifficultyDialog(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                TextButton(
-                                    onClick = {
-                                        width = preset.width
-                                        height = preset.height
-                                        mines = preset.mines
-                                        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
-                                    },
+                                Column(
                                     modifier = Modifier.weight(1f)
                                 ) {
-                                    Text(
-                                        text = "${preset.name} (${preset.width}×${preset.height}, ${preset.mines} mines)",
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
+                                    TextButton(
+                                        onClick = {
+                                            width = preset.width
+                                            height = preset.height
+                                            mines = preset.mines
+                                            selectedPresetName = preset.name
+                                            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "${preset.name} (${preset.width}×${preset.height}, ${preset.mines} mines)",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                textAlign = TextAlign.Start,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            
+                                            // Display best time if it exists
+                                            preset.bestTimeSeconds?.let { time ->
+                                                Text(
+                                                    text = formatTime(time),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.tertiary
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                                 
                                 IconButton(
                                     onClick = {
                                         vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK))
                                         onDeletePreset(preset.name)
+                                        if (selectedPresetName == preset.name) {
+                                            selectedPresetName = null
+                                        }
                                     }
                                 ) {
                                     Icon(
@@ -381,7 +410,7 @@ fun DifficultyDialog(
                     
                     Button(
                         onClick = {
-                            onConfirm(height, width, mines)
+                            onConfirm(height, width, mines, selectedPresetName)
                         }
                     ) {
                         Text("Start Game")
@@ -411,6 +440,7 @@ fun DifficultyDialog(
                             onSavePreset(presetName, width, height, mines)
                             vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
                             showSaveDialog = false
+                            selectedPresetName = presetName
                             presetName = ""
                         }
                     },
@@ -428,4 +458,12 @@ fun DifficultyDialog(
             }
         )
     }
+}
+
+// Helper function to format time from seconds to MM:SS format
+@Composable
+fun formatTime(timeSeconds: Int): String {
+    val minutes = timeSeconds / 60
+    val seconds = timeSeconds % 60
+    return "%d:%02d".format(minutes, seconds)
 }
