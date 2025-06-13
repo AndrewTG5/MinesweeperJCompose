@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -36,9 +37,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,12 +54,37 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: MinesweeperViewModel) {
     val uiState by viewModel.minesweeperUiState.collectAsState()
     var isDigging by remember { mutableStateOf(true) }
+    var currentTimeMillis by remember { mutableLongStateOf(0L) }
+
+    // Timer effect
+    LaunchedEffect(uiState.gameStartTime, uiState.state) {
+        // Only run timer when game is in progress
+        if (uiState.gameStartTime > 0 && uiState.state == 0) {
+            while (true) {
+                currentTimeMillis = System.currentTimeMillis()
+                delay(1000) // Update every second
+            }
+        }
+    }
+
+    // Calculate elapsed time
+    val elapsedSeconds = remember(currentTimeMillis, uiState.gameStartTime) {
+        if (uiState.gameStartTime > 0 && uiState.state == 0) {
+            ((currentTimeMillis - uiState.gameStartTime) / 1000).toInt()
+        } else if (uiState.state > 0 && uiState.gameStartTime > 0) {
+            // Keep the final time if game ended
+            ((System.currentTimeMillis() - uiState.gameStartTime) / 1000).toInt()
+        } else {
+            0
+        }
+    }
 
     val context = LocalContext.current
     val vibrator = context.getSystemService(Vibrator::class.java)
@@ -85,6 +113,15 @@ fun MainScreen(viewModel: MinesweeperViewModel) {
                             }
                         )
                         Text("⛏️")
+                        // Timer display
+                        if (uiState.gameStartTime > 0) {
+                            Spacer(modifier = Modifier.width(32.dp))
+                            Text(
+                                text = formatTime(elapsedSeconds),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
                     }
                 },
                 navigationIcon = { // refresh button, to start a new game
