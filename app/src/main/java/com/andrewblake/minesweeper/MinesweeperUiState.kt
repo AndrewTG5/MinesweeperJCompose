@@ -1,8 +1,12 @@
 package com.andrewblake.minesweeper
 
+enum class State {
+    LevelSelect, NewGame, Playing, Won, Lost
+}
+
 data class MinesweeperUiState(
     val tiles: List<List<Tile>> = emptyList(),
-    val state: Int = -2, // -2 = level select, -1 = new game, 0 = playing, 1 = won, 2 = lost
+    val state: State = State.LevelSelect,
     val height: Int = 0,
     val width: Int = 0,
     val mines: Int = 0,

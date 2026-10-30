@@ -48,13 +48,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,19 +67,19 @@ fun MainScreen(viewModel: MinesweeperViewModel) {
     // Timer effect
     LaunchedEffect(uiState.gameStartTime, uiState.state) {
         // Only run timer when game is in progress
-        if (uiState.gameStartTime > 0 && uiState.state == 0) {
+        if (uiState.gameStartTime > 0 && uiState.state == State.Playing) {
             while (true) {
                 currentTimeMillis = System.currentTimeMillis()
-                delay(1000) // Update every second
+                delay(1000.milliseconds) // Update every second
             }
         }
     }
 
     // Calculate elapsed time
     val elapsedSeconds = remember(currentTimeMillis, uiState.gameStartTime) {
-        if (uiState.gameStartTime > 0 && uiState.state == 0) {
+        if (uiState.gameStartTime > 0 && uiState.state == State.Playing) {
             ((currentTimeMillis - uiState.gameStartTime) / 1000).toInt()
-        } else if (uiState.state > 0 && uiState.gameStartTime > 0) {
+        } else if ((uiState.state == State.Won || uiState.state == State.Lost) && uiState.gameStartTime > 0) {
             // Keep the final time if game ended
             ((System.currentTimeMillis() - uiState.gameStartTime) / 1000).toInt()
         } else {
@@ -95,7 +96,7 @@ fun MainScreen(viewModel: MinesweeperViewModel) {
             .background(color = MaterialTheme.colorScheme.background),
         topBar = {
             CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.primary,
                 ),
@@ -127,7 +128,7 @@ fun MainScreen(viewModel: MinesweeperViewModel) {
                 navigationIcon = { // refresh button, to start a new game
                     IconButton(onClick = {
                         vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK))
-                        viewModel.updateState(-2)
+                        viewModel.updateState(State.LevelSelect)
                     }) {
                         Icon(
                             imageVector = Icons.Filled.Refresh,
@@ -145,7 +146,7 @@ fun MainScreen(viewModel: MinesweeperViewModel) {
         },
     ) { innerPadding ->
 
-        if (uiState.state == -2) {
+        if (uiState.state == State.LevelSelect) {
             DifficultyDialog(
                 vibrator = vibrator, 
                 presets = uiState.presets,
@@ -161,12 +162,12 @@ fun MainScreen(viewModel: MinesweeperViewModel) {
             )
         }
 
-        if (uiState.state > 0) {
+        if (uiState.state == State.Won || uiState.state == State.Lost) {
             AlertDialog(
-                onDismissRequest = { viewModel.updateState(0) },
+                onDismissRequest = { viewModel.updateState(State.Playing) },
                 title = {
                     Text(
-                        text = if (uiState.state == 1) {
+                        text = if (uiState.state == State.Won) {
                             "You Win!"
                         } else {
                             "You Lose!"
@@ -175,7 +176,7 @@ fun MainScreen(viewModel: MinesweeperViewModel) {
                 },
                 text = {
                     Text(
-                        text = if (uiState.state == 1) {
+                        text = if (uiState.state == State.Won) {
                             "You have won the game!"
                         } else {
                             "You have lost the game!"
@@ -185,7 +186,7 @@ fun MainScreen(viewModel: MinesweeperViewModel) {
                 confirmButton = {
                     Button(
                         onClick = {
-                            viewModel.updateState(-2)
+                            viewModel.updateState(State.LevelSelect)
                         }
                     ) {
                         Text(text = "Play Again")
@@ -201,7 +202,7 @@ fun MainScreen(viewModel: MinesweeperViewModel) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val size = minOf(LocalConfiguration.current.screenWidthDp.dp / (uiState.width + 2), LocalConfiguration.current.screenHeightDp.dp / (uiState.height + 3)) // size of tile. extra tiles for padding
+            val size = minOf(LocalWindowInfo.current.containerDpSize.width / (uiState.width + 2), LocalWindowInfo.current.containerDpSize.height / (uiState.height + 3)) // size of tile. extra tiles for padding
             for (i in 0 until uiState.height) { // create tiles
                 Row {
                     for (j in 0 until uiState.width) {
@@ -234,7 +235,7 @@ fun MainScreen(viewModel: MinesweeperViewModel) {
                                             vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK))
                                         }
                                     }
-                                    if (uiState.state == -1) {
+                                    if (uiState.state == State.NewGame) {
                                         viewModel.initBoard(j, i)
                                     } else {
                                         viewModel.digTile(j, i)

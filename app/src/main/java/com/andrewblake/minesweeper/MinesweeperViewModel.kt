@@ -63,7 +63,7 @@ class MinesweeperViewModel(application: Application) : AndroidViewModel(applicat
         }
         
         updateTileList(tiles)
-        updateState(0)
+        updateState(State.Playing)
         digTile(X, Y)
     }
 
@@ -76,7 +76,7 @@ class MinesweeperViewModel(application: Application) : AndroidViewModel(applicat
                 currentPresetName = presetName
             )
         }
-        updateState(-1)
+        updateState(State.NewGame)
         updateTileList(List(height) { List(width) { Tile() } })
     }
 
@@ -101,7 +101,7 @@ class MinesweeperViewModel(application: Application) : AndroidViewModel(applicat
             return
         }
         if (minesweeperUiState.value.tiles[y][x].isMine) {
-            updateState(2)
+            updateState(State.Lost)
             // dig every mine
             val newList = minesweeperUiState.value.tiles.map { row ->
                 row.map { tile ->
@@ -148,7 +148,7 @@ class MinesweeperViewModel(application: Application) : AndroidViewModel(applicat
                 updateBestTime(presetName, elapsedTimeSeconds)
             }
             
-            updateState(1)
+            updateState(State.Won)
         }
     }
 
@@ -182,7 +182,7 @@ class MinesweeperViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun updateState(newState: Int) {
+    fun updateState(newState: State) {
         _minesweeperUiState.update {
             it.copy(state = newState)
         }
